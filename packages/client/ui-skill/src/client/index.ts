@@ -184,6 +184,12 @@ export function apply(ctx: ClientContext): void {
   // A preset decides which skill providers an agent reads, so a switched
   // session's cached catalog belongs to the composition it no longer runs.
   ctx.remote.$on('agent-preset/selected', invalidate)
+  // A provider-side catalog change (for example a scoped skill policy) never
+  // touches the per-session RPC cache above; the registry's `skills/change`
+  // invalidation is the host's announcement that every cached snapshot is
+  // stale. The event carries no session address, so clear all sessions — the
+  // same cost model as `connection/reset`, with lazy refetch on next use.
+  ctx.remote.$on('skills/change', clearAll)
   ctx.on('connection/reset', clearAll)
   ctx.effect(() => {
     const unregister = inputTriggers.registerSource(source)

@@ -44,6 +44,9 @@ export type {} from '@deepseek-ai/dsh-credentials/types'
 export type {} from '@deepseek-ai/dsh-llm/types'
 export type {} from '@deepseek-ai/dsh-agent-presets/types'
 export type {} from '@deepseek-ai/dsh-settings/types'
+// dsh-skill declares `skills/change` on its package root; the type-only
+// re-export carries that Cordis event signature into every client consumer.
+export type {} from '@deepseek-ai/dsh-skill'
 export type {} from '@deepseek-ai/dsh-user-approval/types'
 export type {} from '@deepseek-ai/dsh-user-questions/types'
 export type {} from '@deepseek-ai/dsh-api-session-controller/types'

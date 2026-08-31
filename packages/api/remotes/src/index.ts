@@ -23,6 +23,10 @@ import type {} from '@deepseek-ai/dsh-credentials/types'
 import type {} from '@deepseek-ai/dsh-llm/types'
 import type {} from '@deepseek-ai/dsh-agent-presets/types'
 import type {} from '@deepseek-ai/dsh-settings/types'
+// dsh-skill declares `skills/change` in its package root (no `/types`
+// subpath); the type-only import carries that declaration without pulling the
+// host service into the emitted assembly.
+import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-user-questions'
 export type {} from '@deepseek-ai/dsh-api-session-controller/types'
