@@ -20,7 +20,7 @@ import type {
 } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceBrowserProps } from '../contract/slots.ts'
+import type { WorkspaceBrowserProps, WorkspaceEntryItem } from '../contract/slots.ts'
 import type { SessionNode, SessionOrderBy } from '../tree.ts'
 import { deriveFlat, deriveGroups, deriveSearchResults, UNGROUPED_KEY } from '../tree.ts'
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
@@ -262,6 +262,10 @@ type SessionTreeProps = Pick<
   onSessionArchive: (sessionId: SessionNode['id']) => void
   /** Session order behavior: fixed after edits, or additionally promoted by user activity. */
   orderBy: SessionOrderBy
+  /** Projected per-workspace menu entries (resolved label + id, optional leading icon). */
+  entryItems: readonly WorkspaceEntryItem[]
+  /** Open a per-workspace entry (id from entryItems) for a workspace path. */
+  openWorkspaceEntry: (workspacePath: string, id: string) => void
 }
 
 /** The scrolling session tree; unmounting drops the sessions subscription and expand-all state. */
@@ -271,6 +275,7 @@ function SessionTree({
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
+  entryItems, openWorkspaceEntry,
 }: SessionTreeProps) {
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
@@ -524,6 +529,10 @@ function SessionTree({
                       if (group.workspaceId !== undefined) onDeleteRequest(group.workspaceId, group.label)
                     },
                   }}
+                extraMenuItems={entryItems}
+                onEntrySelect={(id) => {
+                  if (group.cwd !== undefined) openWorkspaceEntry(group.cwd, id)
+                }}
               />
               {(sessionsExpanded
                 ? group.sessions
@@ -822,10 +831,12 @@ export function WorkspaceBrowser({
   useDirectoryFlow,
   useHostInfo,
   renderSlot,
+  workspaceEntryItems,
   t,
 }: WorkspaceBrowserProps) {
   const home = useHostInfo(info => info.home)
   const workspaces = useWorkspaces(state => state.items)
+  const entryItems = workspaceEntryItems()
   const workspacePhase = useWorkspaces(state => state.phase)
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
   // Live occupancy of this surface's directory-flow hole (the same source the
@@ -1035,6 +1046,12 @@ export function WorkspaceBrowser({
   // Delete dialog is separate from the row so a successful removal can
   // unmount that row without tearing down the in-flight confirmation state.
   const [deleteTarget, setDeleteTarget] = useState<{ workspaceId: WorkspaceId; title: string } | null>(null)
+  const [entryTarget, setEntryTarget] = useState<{ workspacePath: string; entryId: string; title: string } | null>(null)
+  const openWorkspaceEntry = (workspacePath: string, id: string) => {
+    const item = entryItems.find(entry => entry.id === id)
+    if (item === undefined) return
+    setEntryTarget({ workspacePath, entryId: id, title: item.label })
+  }
   const [deleting, setDeleting] = useState(false)
   const [deleteCommittedId, setDeleteCommittedId] = useState<WorkspaceId | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -1252,6 +1269,8 @@ export function WorkspaceBrowser({
                 orderBy={orderBy}
                 home={home}
                 t={t}
+                entryItems={entryItems}
+                openWorkspaceEntry={openWorkspaceEntry}
                 onRenameRequest={(workspaceId, currentTitle) => {
                   setRenameTarget({ workspaceId, currentTitle })
                   setRenameDraft(currentTitle)
@@ -1355,6 +1374,15 @@ export function WorkspaceBrowser({
       >
         {deleting && <div className={css.deleteStatus} role="status">{t('delete.pending')}</div>}
         {deleteError !== null && <div className={css.renameError} role="alert">{deleteError}</div>}
+      </Modal>
+
+      <Modal
+        open={entryTarget !== null}
+        onClose={() => { setEntryTarget(null) }}
+        closeLabel={t('close')}
+        title={entryTarget?.title ?? ''}
+      >
+        {entryTarget !== null && renderSlot('sidebar.workspaces.entry', { workspacePath: entryTarget.workspacePath }, { only: entryTarget.entryId })}
       </Modal>
     </div>
   )

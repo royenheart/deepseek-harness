@@ -22,6 +22,7 @@
  * and a hole has exactly one declaring entry — they carry the same owner
  * contract and the same occupant.
  */
+import type { ReactNode } from 'react'
 import type { HostObservable, PropsHooks, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pull the owner SlotMap merges into programs that resolve the
 // runtime shares below.
@@ -32,6 +33,24 @@ import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { createWorkspaceViewStore } from '../stores.ts'
+
+/**
+ * Owner share of a per-workspace entry slot: the workspace directory path the
+ * entry's component receives when rendered from the workspace overflow menu.
+ */
+export interface WorkspaceEntryOwnerProps {
+  readonly workspacePath: string
+}
+
+/**
+ * Projected per-workspace menu entry contributed by a feature plugin: slot
+ * id, resolved label, and an optional leading icon carried by list slots.
+ */
+export interface WorkspaceEntryItem {
+  readonly id: string
+  readonly label: string
+  readonly icon?: ReactNode
+}
 
 /**
  * Owner share of the directory-flow holes: the complete conversation between
@@ -57,6 +76,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
     /** Directory-flow hole under the sidebar browsing region (declared by the WorkspaceBrowser entry). */
     'sidebar.workspaces.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
+    /** Per-workspace menu entries rendered from the workspace overflow menu (declared by the WorkspaceBrowser entry). */
+    'sidebar.workspaces.entry': { kind: 'list'; scope: 'root'; owner: WorkspaceEntryOwnerProps }
   }
 }
 
@@ -142,12 +163,14 @@ export type WorkspaceBrowserInjected = {
   insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => Promise<void>
   /** Adopt a picked host directory as a real Workspace before targeting a Session. */
   createWorkspace: (input: { path: string }) => Promise<WorkspaceView>
+  /** Projected per-workspace menu entries (resolved label + id, optional leading icon) for the overflow menu. */
+  workspaceEntryItems: () => readonly WorkspaceEntryItem[]
 }
 
 /** Full browser props: shell owner share + viewing store + injected actions + the locale seat. */
 export type WorkspaceBrowserProps =
   PropsRuntime<'sidebar.workspaces'>
-  & PropsRenderSlots<'sidebar.workspaces.directoryFlow'>
+  & PropsRenderSlots<'sidebar.workspaces.directoryFlow' | 'sidebar.workspaces.entry'>
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
   & PropsHooks<WorkspaceBrowserInjected['hooks']>
